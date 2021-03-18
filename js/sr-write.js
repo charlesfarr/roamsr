@@ -1,17 +1,17 @@
 /* roam/sr - Spaced Repetition in Roam Research
-   Author: Adam Krivka
-   v1.0.1
-   https://github.com/aidam38/roamsr
+   OG Author: Adam Krivka
+   Bastardizer: Charles Farr
+   forked from v1.0.1
  */
 
 var VERSION = "v1.0.1";
 
-if (!window.roamsr) window.roamsr = {};
+if (!window.roamsrWrite) window.roamsrWrite = {};
 
 /* ====== SCHEDULERS / ALGORITHMS ====== */
 
-// roamsr.ankiScheduler = function(userConfig) { }
-roamsr.ankiScheduler = (userConfig) => {
+// roamsrWrite.ankiScheduler = function(userConfig) { }
+roamsrWrite.ankiScheduler = (userConfig) => {
 
   // sets default config values for scheduling blocks
   var config = {
@@ -23,7 +23,7 @@ roamsr.ankiScheduler = (userConfig) => {
     minFactor: 1.3,
     jitterPercentage: 0.05,
     maxInterval: 50 * 365,
-    responseTexts: ["Again.", "Hard.", "Good.", "Easy."]
+    responseTexts: ["Again", "Fruitful", "Unfruitful"] //, "Easy."]
   }
 
   // overwrites config with userConfig
@@ -58,6 +58,11 @@ roamsr.ankiScheduler = (userConfig) => {
         interval: 0
       },
       {
+        responseText: config.responseTexts[1],
+        signal: 2,
+        interval: 3
+      },
+      {
         responseText: config.responseTexts[2],
         signal: 3,
         interval: config.firstFewIntervals[history ? Math.max(history.length - 1, 0) : 0]
@@ -72,8 +77,8 @@ roamsr.ankiScheduler = (userConfig) => {
               return [prevFactor - config.factorModifier, prevInterval * config.hardFactor];
             case "3":
               return [prevFactor, (prevInterval + delay / 2) * prevFactor];
-            case "4":
-              return [prevFactor + config.factorModifier, (prevInterval + delay) * prevFactor * config.easeBonus];
+            // case "4":
+            //   return [prevFactor + config.factorModifier, (prevInterval + delay) * prevFactor * config.easeBonus];
             default:
               return [prevFactor, prevInterval * prevFactor];
           }
@@ -110,7 +115,7 @@ roamsr.ankiScheduler = (userConfig) => {
           interval: Math.floor(addJitter(calculateNewParams(finalFactor, finalInterval, getDelay(history, finalInterval), signal)[1]))
         }
       }
-      return [getResponse("1"), getResponse("2"), getResponse("3"), getResponse("4")]
+      return [getResponse("1"), getResponse("2"), getResponse("3")] //, getResponse("4")]
     }
   }
   return algorithm;
@@ -118,28 +123,28 @@ roamsr.ankiScheduler = (userConfig) => {
 
 /* ====== HELPER FUNCTIONS ====== */
 
-roamsr.sleep = m => {
+roamsrWrite.sleep = m => {
   var t = m ? m : 10;
   return new Promise(r => setTimeout(r, t))
 };
 
-roamsr.createUid = () => {
+roamsrWrite.createUid = () => {
   // From roam42 based on https://github.com/ai/nanoid#js version 3.1.2
   let nanoid = (t = 21) => { let e = "", r = crypto.getRandomValues(new Uint8Array(t)); for (; t--;) { let n = 63 & r[t]; e += n < 36 ? n.toString(36) : n < 62 ? (n - 26).toString(36).toUpperCase() : n < 63 ? "_" : "-" } return e };
   return nanoid(9);
 };
 
-roamsr.removeSelector = (selector) => {
+roamsrWrite.removeSelector = (selector) => {
   document.querySelectorAll(selector).forEach(element => { element.remove() });
 };
 
-roamsr.goToUid = (uid) => {
+roamsrWrite.goToUid = (uid) => {
   var baseUrl = "/" + new URL(window.location.href).hash.split("/").slice(0, 3).join("/");
   var url = uid ? baseUrl + "/page/" + uid : baseUrl;
   location.assign(url);
 };
 
-roamsr.getFuckingDate = (str) => {
+roamsrWrite.getFuckingDate = (str) => {
   if (!str) return null;
   let strSplit = str.split("-");
   if (strSplit.length != 3) return null;
@@ -152,7 +157,7 @@ roamsr.getFuckingDate = (str) => {
   }
 };
 
-roamsr.getRoamDate = (date) => {
+roamsrWrite.getRoamDate = (date) => {
   if (!date || date == 0) date = new Date();
 
   var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -180,7 +185,7 @@ roamsr.getRoamDate = (date) => {
   return roamDate
 };
 
-roamsr.getIntervalHumanReadable = (n) => {
+roamsrWrite.getIntervalHumanReadable = (n) => {
   if (n == 0) return "<10 min"
   else if (n > 0 && n <= 15) return n + " d"
   else if (n <= 30) return (n / 7).toFixed(1) + " w"
@@ -189,7 +194,7 @@ roamsr.getIntervalHumanReadable = (n) => {
 
 /* ====== LOADING CARDS ====== */
 
-roamsr.loadCards = async (limits, dateBasis = new Date()) => {
+roamsrWrite.loadCards = async (limits, dateBasis = new Date()) => {
   // Common functions
   var getDecks = (res) => {
     let recurDeck = (part) => {
@@ -199,7 +204,7 @@ roamsr.loadCards = async (limits, dateBasis = new Date()) => {
       return result;
     }
     var possibleDecks = recurDeck(res).map(deck => deck.title);
-    return possibleDecks.filter(deckTag => roamsr.settings.customDecks.map(customDeck => customDeck.tag).includes(deckTag));
+    return possibleDecks.filter(deckTag => roamsrWrite.settings.customDecks.map(customDeck => customDeck.tag).includes(deckTag));
   };
 
   var getAlgorithm = (res) => {
@@ -208,13 +213,13 @@ roamsr.loadCards = async (limits, dateBasis = new Date()) => {
     let algorithm;
 
     if (decks && decks.length > 0) {
-      preferredDeck = roamsr.settings.customDecks.filter(customDeck => customDeck.tag == decks[decks.length - 1])[0];
-    } else preferredDeck = roamsr.settings.defaultDeck;
+      preferredDeck = roamsrWrite.settings.customDecks.filter(customDeck => customDeck.tag == decks[decks.length - 1])[0];
+    } else preferredDeck = roamsrWrite.settings.defaultDeck;
 
     let scheduler = preferredDeck.scheduler || preferredDeck.algorithm;
     let config = preferredDeck.config;
     if (!scheduler || scheduler === "anki") {
-      algorithm = roamsr.ankiScheduler(config);
+      algorithm = roamsrWrite.ankiScheduler(config);
     } else algorithm = scheduler(config);
 
     return algorithm;
@@ -222,7 +227,7 @@ roamsr.loadCards = async (limits, dateBasis = new Date()) => {
 
   var isNew = (res) => {
     return res._refs ? !res._refs.some(review => {
-      var reviewDate = new Date(roamsr.getFuckingDate(review.page.uid));
+      var reviewDate = new Date(roamsrWrite.getFuckingDate(review.page.uid));
       reviewDate.setDate(reviewDate.getDate() + 1);
       return reviewDate < dateBasis;
     }) : true
@@ -234,7 +239,7 @@ roamsr.loadCards = async (limits, dateBasis = new Date()) => {
         .filter(ref => (ref._children && ref._children[0].refs) ? ref._children[0].refs.map(ref2 => ref2.title).includes("roam/sr/review") : false)
         .map(review => {
           return {
-            date: roamsr.getFuckingDate(review.page.uid),
+            date: roamsrWrite.getFuckingDate(review.page.uid),
             signal: review.refs[0] ? review.refs[0].title.slice(2) : null,
             uid: review.uid,
             string: review.string
@@ -255,10 +260,10 @@ roamsr.loadCards = async (limits, dateBasis = new Date()) => {
     ])
     :where 
       [?card :block/refs ?srPage] 
-      [?srPage :node/title "${roamsr.settings.mainTag}"] 
+      [?srPage :node/title "${roamsrWrite.settings.mainTag}"] 
       (not-join [?card] 
         [?card :block/refs ?flagPage] 
-        [?flagPage :node/title "${roamsr.settings.flagTag}"])
+        [?flagPage :node/title "${roamsrWrite.settings.flagTag}"])
       (not-join [?card] 
         [?card :block/refs ?queryPage] 
         [?queryPage :node/title "query"])
@@ -278,7 +283,7 @@ roamsr.loadCards = async (limits, dateBasis = new Date()) => {
   });
 
   // Query for today's review
-  var todayUid = roamsr.getRoamDate().uid;
+  var todayUid = roamsrWrite.getRoamDate().uid;
   var todayQuery = `[
     :find (pull ?card 
       [:block/uid 
@@ -293,7 +298,7 @@ roamsr.loadCards = async (limits, dateBasis = new Date()) => {
       [?reviewPage :node/title "roam/sr/review"] 
       [?review :block/refs ?card] 
       [?card :block/refs ?srPage] 
-      [?srPage :node/title "${roamsr.settings.mainTag}"]
+      [?srPage :node/title "${roamsrWrite.settings.mainTag}"]
     ]`
   var todayQueryResult = await window.roamAlphaAPI.q(todayQuery);
   var todayReviewedCards = todayQueryResult
@@ -311,9 +316,9 @@ roamsr.loadCards = async (limits, dateBasis = new Date()) => {
   cards = cards.filter(card => card.history.length > 0 ? card.history.some(review => { return (!review.signal && new Date(review.date) <= dateBasis) }) : true);
 
   // Filter out cards over limit
-  roamsr.state.extraCards = [[], []];
-  if (roamsr.state.limits) {
-    for (deck of roamsr.settings.customDecks.concat(roamsr.settings.defaultDeck)) {
+  roamsrWrite.state.extraCards = [[], []];
+  if (roamsrWrite.state.limits) {
+    for (deck of roamsrWrite.settings.customDecks.concat(roamsrWrite.settings.defaultDeck)) {
 
       var todayReviews = todayReviewedCards.reduce((a, card) => {
         if (deck.tag ? card.decks.includes(deck.tag) : card.decks.length == 0) {
@@ -330,7 +335,7 @@ roamsr.loadCards = async (limits, dateBasis = new Date()) => {
           var j = card.isNew ? 0 : 1;
           var limits = [deck.newCardLimit || 0, deck.reviewLimit || 0];
           if (a[j]++ >= limits[j] - todayReviews[j]) {
-            roamsr.state.extraCards[j].push(cards.splice(i, 1));
+            roamsrWrite.state.extraCards[j].push(cards.splice(i, 1));
           }
         }
         return a;
@@ -345,29 +350,29 @@ roamsr.loadCards = async (limits, dateBasis = new Date()) => {
 
 /* ====== STYLES ====== */
 
-roamsr.addBasicStyles = () => {
+roamsrWrite.addBasicStyles = () => {
   var style = `
-  .roamsr-widget__review-button {
+  .roamsr-write-widget__review-button {
     color: #5C7080 !important;
   }
   
-  .roamsr-widget__review-button:hover {
+  .roamsr-write-widget__review-button:hover {
     color: #F5F8FA !important;
   }
   
-  .roamsr-return-button-container {
+  .roamsr-write-return-button-container {
     z-index: 100000;
     margin: 5px 0px 5px 45px;
   }
 
-  .roamsr-wrapper {
+  .roamsr-write-wrapper {
     pointer-events: none;
     position: relative;
     bottom: 180px;
     justify-content: center;
   }
 
-  .roamsr-container {
+  .roamsr-write-container {
     width: 100%;
     max-width: 600px;
     justify-content: center;
@@ -375,59 +380,59 @@ roamsr.addBasicStyles = () => {
     padding: 5px 20px;
   }
 
-  .roamsr-button {
+  .roamsr-write-button {
     z-index: 10000;
     pointer-events: all;
   }
 
-  .roamsr-response-area {
+  .roamsr-write-response-area {
     flex-wrap: wrap;
     justify-content: center;
     margin-bottom: 15px;
   }
 
-  .roamsr-flag-button-container {
+  .roamsr-write-flag-button-container {
     width: 100%;
   }
   `
   var basicStyles = Object.assign(document.createElement("style"), {
-    id: "roamsr-css-basic",
+    id: "roamsr-write-css-basic",
     innerHTML: style
   });
   document.getElementsByTagName("head")[0].appendChild(basicStyles);
 };
 
-roamsr.setCustomStyle = (yes) => {
-  var styleId = "roamsr-css-custom"
+roamsrWrite.setCustomStyle = (yes) => {
+  var styleId = "roamsr-write-css-custom"
   var element = document.getElementById(styleId);
   if (element) element.remove();
 
   if (yes) {
     // Query new style
     var styleQuery = window.roamAlphaAPI.q(
-      `[:find (pull ?style [:block/string]) :where [?roamsr :node/title "roam\/sr"] [?roamsr :block/children ?css] [?css :block/refs ?roamcss] [?roamcss :node/title "roam\/css"] [?css :block/children ?style]]`
+      `[:find (pull ?style [:block/string]) :where [?roamsrWrite :node/title "roam\/sr"] [?roamsrWrite :block/children ?css] [?css :block/refs ?roamcss] [?roamcss :node/title "roam\/css"] [?css :block/children ?style]]`
     );
 
     if (styleQuery && styleQuery.length != 0) {
       var customStyle = styleQuery[0][0].string.replace("`"+"``css", "").replace("`"+"``", "");
 
-      var roamsrCSS = Object.assign(document.createElement("style"), {
+      var roamsrWriteCSS = Object.assign(document.createElement("style"), {
         id: styleId,
         innerHTML: customStyle
       });
 
-      document.getElementsByTagName("head")[0].appendChild(roamsrCSS);
+      document.getElementsByTagName("head")[0].appendChild(roamsrWriteCSS);
     }
   }
 };
 
-roamsr.showAnswerAndCloze = (yes) => {
-  var styleId = "roamsr-css-mainview"
+roamsrWrite.showAnswerAndCloze = (yes) => {
+  var styleId = "roamsr-write-css-mainview"
   var element = document.getElementById(styleId);
   if (element) element.remove();
 
   if (yes) {
-    var clozeStyle = roamsr.settings.clozeStyle || "highlight";
+    var clozeStyle = roamsrWrite.settings.clozeStyle || "highlight";
     var style = `
     .roam-article .rm-reference-main,
     .roam-article .rm-block-children
@@ -450,11 +455,11 @@ roamsr.showAnswerAndCloze = (yes) => {
 
 /* ====== MAIN FUNCTIONS ====== */
 
-roamsr.scheduleCardIn = async (card, interval) => {
+roamsrWrite.scheduleCardIn = async (card, interval) => {
   var nextDate = new Date();
   nextDate.setDate(nextDate.getDate() + interval);
 
-  var nextRoamDate = roamsr.getRoamDate(nextDate);
+  var nextRoamDate = roamsrWrite.getRoamDate(nextDate);
 
   // Create daily note if it doesn't exist yet
   await window.roamAlphaAPI.createPage({
@@ -463,7 +468,7 @@ roamsr.scheduleCardIn = async (card, interval) => {
     }
   });
 
-  await roamsr.sleep();
+  await roamsrWrite.sleep();
 
   // Query for the [[roam/sr/review]] block
   var queryReviewBlock = window.roamAlphaAPI.q('[:find (pull ?reviewBlock [:block/uid]) :in $ ?dailyNoteUID :where [?reviewBlock :block/refs ?reviewPage] [?reviewPage :node/title "roam/sr/review"] [?dailyNote :block/children ?reviewBlock] [?dailyNote :block/uid ?dailyNoteUID]]', nextRoamDate.uid);
@@ -471,7 +476,7 @@ roamsr.scheduleCardIn = async (card, interval) => {
   // Check if it's there; if not, create it
   var topLevelUid;
   if (queryReviewBlock.length == 0) {
-    topLevelUid = roamsr.createUid();
+    topLevelUid = roamsrWrite.createUid();
     await window.roamAlphaAPI.createBlock({
       location: {
         "parent-uid": nextRoamDate.uid,
@@ -482,14 +487,14 @@ roamsr.scheduleCardIn = async (card, interval) => {
         uid: topLevelUid
       }
     });
-    await roamsr.sleep();
+    await roamsrWrite.sleep();
   } else {
     topLevelUid = queryReviewBlock[0][0].uid;
   }
 
   // Generate the block
   var block = {
-    uid: roamsr.createUid(),
+    uid: roamsrWrite.createUid(),
     string: "((" + card.uid + "))"
   }
   // Finally, schedule the card
@@ -500,7 +505,7 @@ roamsr.scheduleCardIn = async (card, interval) => {
     },
     block: block
   });
-  await roamsr.sleep();
+  await roamsrWrite.sleep();
 
   return {
     date: nextRoamDate.uid,
@@ -510,7 +515,7 @@ roamsr.scheduleCardIn = async (card, interval) => {
   };
 };
 
-roamsr.responseHandler = async (card, interval, signal) => {
+roamsrWrite.responseHandler = async (card, interval, signal) => {
   console.log("Signal: " + signal + ", Interval: " + interval);
   var hist = card.history;
 
@@ -524,7 +529,7 @@ roamsr.responseHandler = async (card, interval, signal) => {
         }
       });
     }
-    var todayReviewBlock = await roamsr.scheduleCardIn(card, 0);
+    var todayReviewBlock = await roamsrWrite.scheduleCardIn(card, 0);
     hist.push(todayReviewBlock);
   }
 
@@ -541,7 +546,7 @@ roamsr.responseHandler = async (card, interval, signal) => {
   hist.push(last);
 
   // Schedule card to future
-  var nextReview = await roamsr.scheduleCardIn(card, interval);
+  var nextReview = await roamsrWrite.scheduleCardIn(card, interval);
   hist.push(nextReview);
 
   // If it's scheduled for today, add it to the end of the queue
@@ -549,68 +554,68 @@ roamsr.responseHandler = async (card, interval, signal) => {
     var newCard = card;
     newCard.history = hist;
     newCard.isNew = false;
-    roamsr.state.queue.push(newCard);
+    roamsrWrite.state.queue.push(newCard);
   }
 };
 
-roamsr.flagCard = () => {
-  var card = roamsr.getCurrentCard();
+roamsrWrite.flagCard = () => {
+  var card = roamsrWrite.getCurrentCard();
   window.roamAlphaAPI.updateBlock({
     block: {
       uid: card.uid,
-      string: card.string + " #" + roamsr.settings.flagTag
+      string: card.string + " #" + roamsrWrite.settings.flagTag
     }
   });
   
-  var j = roamsr.getCurrentCard().isNew ? 0 : 1;
+  var j = roamsrWrite.getCurrentCard().isNew ? 0 : 1;
 
-  var extraCard = roamsr.state.extraCards[j].shift();
-  if(extraCard) roamsr.state.queue.push(extraCard);
+  var extraCard = roamsrWrite.state.extraCards[j].shift();
+  if(extraCard) roamsrWrite.state.queue.push(extraCard);
 };
 
-roamsr.stepToNext = async () => {
-  if (roamsr.state.currentIndex + 1 >= roamsr.state.queue.length) {
-    roamsr.endSession();
+roamsrWrite.stepToNext = async () => {
+  if (roamsrWrite.state.currentIndex + 1 >= roamsrWrite.state.queue.length) {
+    roamsrWrite.endSession();
   } else {
-    roamsr.state.currentIndex++;
-    roamsr.goToCurrentCard();
+    roamsrWrite.state.currentIndex++;
+    roamsrWrite.goToCurrentCard();
   }
-  roamsr.updateCounters();
+  roamsrWrite.updateCounters();
 };
 
-roamsr.goToCurrentCard = async () => {
+roamsrWrite.goToCurrentCard = async () => {
   window.onhashchange = () => { };
-  roamsr.showAnswerAndCloze(true);
-  roamsr.removeReturnButton();
+  roamsrWrite.showAnswerAndCloze(true);
+  roamsrWrite.removeReturnButton();
   var doStuff = async () => {
-    roamsr.goToUid(roamsr.getCurrentCard().uid);
-    await roamsr.sleep(50);
-    roamsr.addContainer();
-    roamsr.addShowAnswerButton();
+    roamsrWrite.goToUid(roamsrWrite.getCurrentCard().uid);
+    await roamsrWrite.sleep(50);
+    roamsrWrite.addContainer();
+    roamsrWrite.addShowAnswerButton();
   }
 
   await doStuff();
   window.onhashchange = doStuff;
 
-  await roamsr.sleep(500);
+  await roamsrWrite.sleep(500);
 
   await doStuff();
 
   window.onhashchange = () => {
-    roamsr.removeContainer();
-    roamsr.addReturnButton();
-    roamsr.showAnswerAndCloze(false);
+    roamsrWrite.removeContainer();
+    roamsrWrite.addReturnButton();
+    roamsrWrite.showAnswerAndCloze(false);
     window.onhashchange = () => { };
   }
 };
 
 /* ====== SESSIONS ====== */
 
-roamsr.loadSettings = () => {
+roamsrWrite.loadSettings = () => {
   // Default settings
-  roamsr.settings = {
-    mainTag: "sr",
-    flagTag: "f",
+  roamsrWrite.settings = {
+    mainTag: "sr-write",
+    flagTag: "sr-flag",
     clozeStyle: "highlight", // "highlight" or "block-ref"
     defaultDeck: {
       algorithm: null,
@@ -620,88 +625,88 @@ roamsr.loadSettings = () => {
     },
     customDecks: []
   };
-  roamsr.settings = Object.assign(roamsr.settings, window.roamsrUserSettings);
+  roamsrWrite.settings = Object.assign(roamsrWrite.settings, window.roamsrWriteUserSettings);
 };
 
-roamsr.loadState = async (i) => {
-  roamsr.state = {
+roamsrWrite.loadState = async (i) => {
+  roamsrWrite.state = {
     limits: true,
     currentIndex: i,
   }
-  roamsr.state.queue = await roamsr.loadCards();
+  roamsrWrite.state.queue = await roamsrWrite.loadCards();
   return;
 };
 
-roamsr.getCurrentCard = () => {
-  var card = roamsr.state.queue[roamsr.state.currentIndex];
+roamsrWrite.getCurrentCard = () => {
+  var card = roamsrWrite.state.queue[roamsrWrite.state.currentIndex];
   return card ? card : {};
 };
 
-roamsr.startSession = async () => {
-  if (roamsr.state && roamsr.state.queue.length > 0) {
+roamsrWrite.startSession = async () => {
+  if (roamsrWrite.state && roamsrWrite.state.queue.length > 0) {
     console.log("Starting session.");
 
-    roamsr.setCustomStyle(true);
+    roamsrWrite.setCustomStyle(true);
 
     // Hide left sidebar
     try {
       document.getElementsByClassName("bp3-icon-menu-closed")[0].click();
     } catch (e) { }
 
-    roamsr.loadSettings();
-    await roamsr.loadState(0);
+    roamsrWrite.loadSettings();
+    await roamsrWrite.loadState(0);
 
     console.log("The queue: ");
-    console.log(roamsr.state.queue);
+    console.log(roamsrWrite.state.queue);
 
-    await roamsr.goToCurrentCard();
+    await roamsrWrite.goToCurrentCard();
 
-    roamsr.addKeyListener();
+    roamsrWrite.addKeyListener();
 
     // Change widget
-    var widget = document.querySelector(".roamsr-widget")
+    var widget = document.querySelector(".roamsr-write-widget")
     widget.innerHTML = "<div style='padding: 5px 0px'><span class='bp3-icon bp3-icon-cross'></span> END SESSION</div>";
-    widget.onclick = roamsr.endSession;
+    widget.onclick = roamsrWrite.endSession;
   }
 };
 
-roamsr.endSession = async () => {
+roamsrWrite.endSession = async () => {
   window.onhashchange = () => { };
   console.log("Ending sesion.");
 
   // Change widget
-  roamsr.removeSelector(".roamsr-widget");
-  roamsr.addWidget();
+  roamsrWrite.removeSelector(".roamsr-write-widget");
+  roamsrWrite.addWidget();
 
   // Remove elements
   var doStuff = async () => {
-    roamsr.removeContainer();
-    roamsr.removeReturnButton();
-    roamsr.setCustomStyle(false);
-    roamsr.showAnswerAndCloze(false);
-    roamsr.removeKeyListener();
-    roamsr.goToUid();
+    roamsrWrite.removeContainer();
+    roamsrWrite.removeReturnButton();
+    roamsrWrite.setCustomStyle(false);
+    roamsrWrite.showAnswerAndCloze(false);
+    roamsrWrite.removeKeyListener();
+    roamsrWrite.goToUid();
 
-    await roamsr.loadState(-1);
-    roamsr.updateCounters();
+    await roamsrWrite.loadState(-1);
+    roamsrWrite.updateCounters();
   }
 
   await doStuff();
-  await roamsr.sleep(200);
+  await roamsrWrite.sleep(200);
   await doStuff(); // ... again to make sure
-  await roamsr.sleep(1000);
-  await roamsr.loadState(-1);
-  roamsr.updateCounters(); // ... once again
+  await roamsrWrite.sleep(1000);
+  await roamsrWrite.loadState(-1);
+  roamsrWrite.updateCounters(); // ... once again
 };
 
 /* ====== UI ELEMENTS ====== */
 
 // COMMON
-roamsr.getCounter = (deck) => {
+roamsrWrite.getCounter = (deck) => {
   // Getting the number of new cards
   var cardCount = [0, 0];
-  if (roamsr.state.queue) {
-    var remainingQueue = roamsr.state.queue.slice(Math.max(roamsr.state.currentIndex, 0));
+  if (roamsrWrite.state.queue) {
+    var remainingQueue = roamsrWrite.state.queue.slice(Math.max(roamsrWrite.state.currentIndex, 0));
     var filteredQueue = !deck ? remainingQueue : remainingQueue.filter((card) => card.decks.includes(deck));
     cardCount = filteredQueue.reduce((a, card) => {
       if (card.isNew) a[0]++;
@@ -712,53 +717,53 @@ roamsr.getCounter = (deck) => {
 
   // Create the element
   var counter = Object.assign(document.createElement("div"), {
-    className: "roamsr-counter",
+    className: "roamsr-write-counter",
     innerHTML: `<span style="color: dodgerblue; padding-right: 8px">` + cardCount[0] + `</span> <span style="color: green;">` + cardCount[1] + `</span>`,
   });
   return counter;
 };
 
-roamsr.updateCounters = () => {
-  var counter = document.querySelectorAll(".roamsr-counter").forEach(counter => {
-    counter.innerHTML = roamsr.getCounter().innerHTML;
-    counter.style.cssText = !roamsr.state.limits ? "font-style: italic;" : "font-style: inherit;"
+roamsrWrite.updateCounters = () => {
+  var counter = document.querySelectorAll(".roamsr-write-counter").forEach(counter => {
+    counter.innerHTML = roamsrWrite.getCounter().innerHTML;
+    counter.style.cssText = !roamsrWrite.state.limits ? "font-style: italic;" : "font-style: inherit;"
   })
 };
 
 // CONTAINER
-roamsr.addContainer = () => {
-  if (!document.querySelector(".roamsr-container")) {
+roamsrWrite.addContainer = () => {
+  if (!document.querySelector(".roamsr-write-container")) {
     var wrapper = Object.assign(document.createElement("div"), {
-      className: "flex-h-box roamsr-wrapper"
+      className: "flex-h-box roamsr-write-wrapper"
     })
     var container = Object.assign(document.createElement("div"), {
-      className: "flex-v-box roamsr-container",
+      className: "flex-v-box roamsr-write-container",
     });
 
     var flagButtonContainer = Object.assign(document.createElement("div"), {
-      className: "flex-h-box roamsr-flag-button-container"
+      className: "flex-h-box roamsr-write-flag-button-container"
     });
     var flagButton = Object.assign(document.createElement("button"), {
-      className: "bp3-button roamsr-button",
-      innerHTML: "Flag.",
+      className: "bp3-button roamsr-write-button",
+      innerHTML: "Flag",
       onclick: async () => {
-        await roamsr.flagCard();
-        roamsr.stepToNext();
+        await roamsrWrite.flagCard();
+        roamsrWrite.stepToNext();
       }
     });
     var skipButton = Object.assign(document.createElement("button"), {
-      className: "bp3-button roamsr-button",
-      innerHTML: "Skip.",
-      onclick: roamsr.stepToNext
+      className: "bp3-button roamsr-write-button",
+      innerHTML: "Skip",
+      onclick: roamsrWrite.stepToNext
     });
     flagButtonContainer.style.cssText = "justify-content: space-between;";
     flagButtonContainer.append(flagButton, skipButton);
 
     var responseArea = Object.assign(document.createElement("div"), {
-      className: "flex-h-box roamsr-container__response-area"
+      className: "flex-h-box roamsr-write-container__response-area"
     });
 
-    container.append(roamsr.getCounter(), responseArea, flagButtonContainer);
+    container.append(roamsrWrite.getCounter(), responseArea, flagButtonContainer);
     wrapper.append(container);
 
     var bodyDiv = document.querySelector(".roam-body-main");
@@ -766,47 +771,47 @@ roamsr.addContainer = () => {
   }
 };
 
-roamsr.removeContainer = () => {
-  roamsr.removeSelector(".roamsr-wrapper");
+roamsrWrite.removeContainer = () => {
+  roamsrWrite.removeSelector(".roamsr-write-wrapper");
 };
 
-roamsr.clearAndGetResponseArea = () => {
-  var responseArea = document.querySelector(".roamsr-container__response-area");
+roamsrWrite.clearAndGetResponseArea = () => {
+  var responseArea = document.querySelector(".roamsr-write-container__response-area");
   if (responseArea) responseArea.innerHTML = ""
   return responseArea;
 };
 
-roamsr.addShowAnswerButton = () => {
-  var responseArea = roamsr.clearAndGetResponseArea();
+roamsrWrite.addShowAnswerButton = () => {
+  var responseArea = roamsrWrite.clearAndGetResponseArea();
 
   var showAnswerAndClozeButton = Object.assign(document.createElement("button"), {
-    className: "bp3-button roamsr-container__response-area__show-answer-button roamsr-button",
+    className: "bp3-button roamsr-write-container__response-area__show-answer-button roamsr-write-button",
     innerHTML: "Show answer.",
-    onclick: () => { roamsr.showAnswerAndCloze(false); roamsr.addResponseButtons(); }
+    onclick: () => { roamsrWrite.showAnswerAndCloze(false); roamsrWrite.addResponseButtons(); }
   })
   showAnswerAndClozeButton.style.cssText = "margin: 5px;";
 
   responseArea.append(showAnswerAndClozeButton);
 };
 
-roamsr.addResponseButtons = () => {
-  var responseArea = roamsr.clearAndGetResponseArea();
+roamsrWrite.addResponseButtons = () => {
+  var responseArea = roamsrWrite.clearAndGetResponseArea();
 
   // Add new responses
-  var responses = roamsr.getCurrentCard().algorithm(roamsr.getCurrentCard().history);
+  var responses = roamsrWrite.getCurrentCard().algorithm(roamsrWrite.getCurrentCard().history);
   for (response of responses) {
     const res = response;
     var responseButton = Object.assign(document.createElement("button"), {
-      id: "roamsr-response-" + res.signal,
-      className: "bp3-button roamsr-container__response-area__response-button roamsr-button",
-      innerHTML: res.responseText + "<sup>" + roamsr.getIntervalHumanReadable(res.interval) + "</sup>",
+      id: "roamsr-write-response-" + res.signal,
+      className: "bp3-button roamsr-write-container__response-area__response-button roamsr-write-button",
+      innerHTML: res.responseText + "<sup>" + roamsrWrite.getIntervalHumanReadable(res.interval) + "</sup>",
       onclick: async () => {
         if (res.interval != 0) {
-          roamsr.responseHandler(roamsr.getCurrentCard(), res.interval, res.signal.toString());
+          roamsrWrite.responseHandler(roamsrWrite.getCurrentCard(), res.interval, res.signal.toString());
         } else {
-          await roamsr.responseHandler(roamsr.getCurrentCard(), res.interval, res.signal.toString());
+          await roamsrWrite.responseHandler(roamsrWrite.getCurrentCard(), res.interval, res.signal.toString());
         }
-        roamsr.stepToNext();
+        roamsrWrite.stepToNext();
       }
     })
     responseButton.style.cssText = "margin: 5px;";
@@ -815,8 +820,8 @@ roamsr.addResponseButtons = () => {
 };
 
 // RETURN BUTTON
-roamsr.addReturnButton = () => {
-  var returnButtonClass = "roamsr-return-button-container";
+roamsrWrite.addReturnButton = () => {
+  var returnButtonClass = "roamsr-write-return-button-container";
   if (document.querySelector(returnButtonClass)) return;
 
   var main = document.querySelector(".roam-main");
@@ -825,49 +830,49 @@ roamsr.addReturnButton = () => {
     className: "flex-h-box " + returnButtonClass,
   });
   var returnButton = Object.assign(document.createElement("button"), {
-    className: "bp3-button bp3-large roamsr-return-button",
+    className: "bp3-button bp3-large roamsr-write-return-button",
     innerText: "Return.",
-    onclick: roamsr.goToCurrentCard
+    onclick: roamsrWrite.goToCurrentCard
   });
   returnButtonContainer.append(returnButton);
   main.insertBefore(returnButtonContainer, body);
 };
 
-roamsr.removeReturnButton = () => {
-  roamsr.removeSelector(".roamsr-return-button-container");
+roamsrWrite.removeReturnButton = () => {
+  roamsrWrite.removeSelector(".roamsr-write-return-button-container");
 };
 
 // SIDEBAR WIDGET
-roamsr.createWidget = () => {
+roamsrWrite.createWidget = () => {
   var widget = Object.assign(document.createElement("div"), {
-    className: "log-button flex-h-box roamsr-widget",
+    className: "log-button flex-h-box roamsr-write-widget",
   });
   widget.style.cssText = "align-items: center; justify-content: space-around; padding-top: 8px;"
 
   var reviewButton = Object.assign(document.createElement("div"), {
-    className: "bp3-button bp3-minimal roamsr-widget__review-button",
+    className: "bp3-button bp3-minimal roamsr-write-widget__review-button",
     innerHTML: `<span style="padding-right: 8px;"><svg width="16" height="16" version="1.1" viewBox="0 0 4.2333 4.2333" style="color:5c7080;">
   <g id="chat_1_" transform="matrix(.26458 0 0 .26458 115.06 79.526)">
     <g transform="matrix(-.79341 0 0 -.88644 -420.51 -284.7)" fill="currentColor">
       <path d="m6 13.665c-1.1 0-2-1.2299-2-2.7331v-6.8327h-3c-0.55 0-1 0.61495-1 1.3665v10.932c0 0.7516 0.45 1.3665 1 1.3665h9c0.55 0 1-0.61495 1-1.3665l-5.04e-4 -1.5989v-1.1342h-0.8295zm9-13.665h-9c-0.55 0-1 0.61495-1 1.3665v9.5658c0 0.7516 0.45 1.3665 1 1.3665h9c0.55 0 1-0.61495 1-1.3665v-9.5658c0-0.7516-0.45-1.3665-1-1.3665z"
         clip-rule="evenodd" fill="currentColor" fill-rule="evenodd" />
     </g>
-  </g></svg></span> REVIEW`,
+  </g></svg></span> SR WRITE`,
     //  <span class="bp3-icon bp3-icon-chevron-down expand-icon"></span>`
-    onclick: roamsr.startSession
+    onclick: roamsrWrite.startSession
   });
   reviewButton.style.cssText = "padding: 2px 8px;";
 
-  var counter = Object.assign(roamsr.getCounter(), {
-    className: "bp3-button bp3-minimal roamsr-counter",
+  var counter = Object.assign(roamsrWrite.getCounter(), {
+    className: "bp3-button bp3-minimal roamsr-write-counter",
     onclick: async () => {
-      roamsr.state.limits = !roamsr.state.limits;
-      roamsr.state.queue = await roamsr.loadCards();
-      roamsr.updateCounters();
+      roamsrWrite.state.limits = !roamsrWrite.state.limits;
+      roamsrWrite.state.queue = await roamsrWrite.loadCards();
+      roamsrWrite.updateCounters();
     }
   });
   var counterContainer = Object.assign(document.createElement("div"), {
-    className: "flex-h-box roamsr-widget__counter",
+    className: "flex-h-box roamsr-write-widget__counter",
   })
   counterContainer.style.cssText = "justify-content: center; width: 50%";
   counterContainer.append(counter);
@@ -877,15 +882,15 @@ roamsr.createWidget = () => {
   return widget;
 };
 
-roamsr.addWidget = () => {
-  if (!document.querySelector(".roamsr-widget")) {
-    roamsr.removeSelector(".roamsr-widget-delimiter")
+roamsrWrite.addWidget = () => {
+  if (!document.querySelector(".roamsr-write-widget")) {
+    roamsrWrite.removeSelector(".roamsr-write-widget-delimiter")
     var delimiter = Object.assign(document.createElement("div"), {
-      className: "roamsr-widget-delimiter"
+      className: "roamsr-write-widget-delimiter"
     });
     delimiter.style.cssText = "flex: 0 0 1px; background-color: rgb(57, 75, 89); margin: 8px 20px;";
 
-    var widget = roamsr.createWidget();
+    var widget = roamsrWrite.createWidget();
 
     var sidebar = document.querySelector(".roam-sidebar-content");
     var starredPages = document.querySelector(".starred-pages-wrapper");
@@ -896,23 +901,23 @@ roamsr.addWidget = () => {
 };
 
 /* ====== KEYBINDINGS ====== */
-roamsr.processKey = (e) => {
+roamsrWrite.processKey = (e) => {
   // console.log("alt: " + e.altKey + "  shift: " + e.shiftKey + "  ctrl: " + e.ctrlKey + "   code: " + e.code + "   key: " + e.key);
-  if (document.activeElement.type == "textarea" || !location.href.includes(roamsr.getCurrentCard().uid)) {
+  if (document.activeElement.type == "textarea" || !location.href.includes(roamsrWrite.getCurrentCard().uid)) {
     return;
   }
 
-  var responses = roamsr.getCurrentCard().algorithm(roamsr.getCurrentCard().history);
+  var responses = roamsrWrite.getCurrentCard().algorithm(roamsrWrite.getCurrentCard().history);
   var handleNthResponse = async (n) => {
     console.log("Handling response: " + n)
     if (n >= 0 && n < responses.length) {
       const res = responses[n];
       if (res.interval != 0) {
-        roamsr.responseHandler(roamsr.getCurrentCard(), res.interval, res.signal.toString());
+        roamsrWrite.responseHandler(roamsrWrite.getCurrentCard(), res.interval, res.signal.toString());
       } else {
-        await roamsr.responseHandler(roamsr.getCurrentCard(), res.interval, res.signal.toString());
+        await roamsrWrite.responseHandler(roamsrWrite.getCurrentCard(), res.interval, res.signal.toString());
       }
-      roamsr.stepToNext();
+      roamsrWrite.stepToNext();
     }
   }
 
@@ -932,43 +937,43 @@ roamsr.processKey = (e) => {
     }
 
     if (e.code == "Space") {
-      roamsr.showAnswerAndCloze(false); roamsr.addResponseButtons();
+      roamsrWrite.showAnswerAndCloze(false); roamsrWrite.addResponseButtons();
       return;
     }
 
     if (e.code == "KeyF") {
-      roamsr.flagCard().then(() => {
-        roamsr.stepToNext();
+      roamsrWrite.flagCard().then(() => {
+        roamsrWrite.stepToNext();
       });
       return;
     }
 
     if (e.code == "KeyS" && !e.ctrlKey && !e.shiftKey) {
-      roamsr.stepToNext();
+      roamsrWrite.stepToNext();
       return;
     }
 
     if (e.code == "KeyD" && e.altKey) {
-      roamsr.endSession();
+      roamsrWrite.endSession();
       return;
     }
 };
 
-roamsr.processKeyAlways = (e) => {
+roamsrWrite.processKeyAlways = (e) => {
   // Alt+enter TODO
 } 
 
-roamsr.addKeyListener = () => {
-    document.addEventListener("keydown", roamsr.processKey);
+roamsrWrite.addKeyListener = () => {
+    document.addEventListener("keydown", roamsrWrite.processKey);
 };
 
-roamsr.removeKeyListener = () => {
-    document.removeEventListener("keydown", roamsr.processKey);
+roamsrWrite.removeKeyListener = () => {
+    document.removeEventListener("keydown", roamsrWrite.processKey);
 };
 
 /* ====== {{sr}} BUTTON ====== */
-roamsr.buttonClickHandler = async (e) => {
-  if (e.target.tagName === 'BUTTON' && e.target.textContent === roamsr.settings.mainTag) {
+roamsrWrite.buttonClickHandler = async (e) => {
+  if (e.target.tagName === 'BUTTON' && e.target.textContent === roamsrWrite.settings.mainTag) {
     var block = e.target.closest('.roam-block');
     if (block) {
       var uid = block.id.substring(block.id.length - 9);
@@ -983,7 +988,7 @@ roamsr.buttonClickHandler = async (e) => {
         window.roamAlphaAPI.updateBlock({
           block: {
             uid: child.uid,
-            string: child.string.trim() + ' #' + roamsr.settings.mainTag
+            string: child.string.trim() + ' #' + roamsrWrite.settings.mainTag
           }
         });
       }
@@ -991,16 +996,16 @@ roamsr.buttonClickHandler = async (e) => {
   }
 }
 
-document.addEventListener("click", roamsr.buttonClickHandler, false);
+document.addEventListener("click", roamsrWrite.buttonClickHandler, false);
 
 /* ====== CALLING FUNCTIONS DIRECTLY ====== */
 
-console.log("🗃️ Loading roam/sr " + VERSION + ".");
+console.log("🗃️ Loading roam/sr-write " + VERSION + ".");
 
-roamsr.loadSettings();
-roamsr.addBasicStyles();
-roamsr.loadState(-1).then(res => {
-  roamsr.addWidget();
+roamsrWrite.loadSettings();
+roamsrWrite.addBasicStyles();
+roamsrWrite.loadState(-1).then(res => {
+  roamsrWrite.addWidget();
 });
 
-console.log("🗃️ Successfully loaded roam/sr " + VERSION + ".");
+console.log("🗃️ Successfully loaded roam/sr-write " + VERSION + ".");
